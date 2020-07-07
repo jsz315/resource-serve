@@ -1,7 +1,8 @@
 const Koa = require('koa')
 const Router = require('koa-router')
-var cors = require('koa-cors')
+const cors = require('koa-cors')
 const path = require('path')
+const static = require('koa-static')
 
 const app = new Koa()
 const router = new Router();
@@ -10,11 +11,10 @@ const resourceRouter = require('./api/resource');
 app.use(cors());
 
 async function start(host, port) {
-    
 
-    router.get("/test", async (ctx, next) => {
-        ctx.body = "test";
-    })
+    app.use(static(
+        path.join(__dirname, '../static')
+    ))
 
     app.use(router.routes(), router.allowedMethods())
     app.use(resourceRouter.routes(), resourceRouter.allowedMethods())
