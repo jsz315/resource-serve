@@ -18,15 +18,26 @@ const selectTags = function () {
     });
 }
 
-const selectImgs = async function(){
+const selectImgs = async function(start, size){
     var sql = `
             select a.id, a.name, a.desc, a.timer, group_concat(m.tag_id separator ',') tags
             from lib_image a join map_image_tag m
             on a.id=m.img_id
             group by a.id
+            order by a.id desc
+            limit ?, ?;
         `;
-    var res = await doSql(sql, []);
-    return res;
+    var list = await doSql(sql, [start, size]);
+    sql = `
+        SELECT count(distinct(a.id)) tl
+        FROM lib_image a join map_image_tag m 
+        on a.id=m.img_id;
+    `;
+    var total = await doSql(sql);
+    return {
+        list,
+        total
+    };
 }
 
 const add = async function (obj) {
@@ -74,6 +85,12 @@ function deleteTags(id){
     return doSql(sql, param);
 }
 
+function addTag(tag){
+    var sql = 'INSERT INTO `asset`.`lib_tag`(`name`) VALUES(?)';
+    var param = [tag];
+    return doSql(sql, param);
+}
+
 function setTags(id, tagstr){
     var tags = tagstr.split(",");
     var keyValues = tags.map(element => '(?, ?)');
@@ -84,6 +101,46 @@ function setTags(id, tagstr){
         param.push(element)
     });
     return doSql(sql, param);
+}
+
+function search(name, isTag, isDesc){
+    var sql;
+    console.log("name, isTag, isDesc")
+    console.log(name, isTag, isDesc)
+    console.log(typeof name, typeof isTag, typeof isDesc)
+    if(isTag && isDesc){
+        sql = `
+        select i.id, i.name, i.timer, i.desc, group_concat(m.tag_id separator ",") tags 
+        from asset.lib_tag t, asset.map_image_tag m, asset.lib_image i 
+        where t.id=m.tag_id and m.img_id=i.id 
+        and (t.name like "%${name}%" or i.desc like "%${name}%") 
+        group by i.id
+        order by i.id desc;
+        `;
+    }
+    else{
+        if(isTag){
+            sql = `
+            select i.id, i.name, i.timer, i.desc, group_concat(m.tag_id separator ",") tags 
+            from asset.lib_tag t, asset.map_image_tag m, asset.lib_image i 
+            where t.id=m.tag_id and m.img_id=i.id and t.name like "%${name}%" 
+            group by i.id
+            order by i.id desc;
+            `;
+        }
+        if(isDesc){
+            // sql = 'SELECT * FROM asset.lib_image where `desc` like "%' + name + '%";';
+            sql = `
+            select a.id, a.name, a.desc, a.timer, group_concat(m.tag_id separator ',') tags
+            from lib_image a join map_image_tag m
+            on a.id=m.img_id
+            where a.desc like "%${name}%"
+            group by a.id
+            order by a.id desc;
+            `;
+        }
+    }
+    return doSql(sql, []);
 }
 
 function doSql(sql, param) {
@@ -110,6 +167,17 @@ from acticle a join atmap m
 on a.id=m.a_id
 group by a.id
 
+SELECT * FROM asset.map_image_tag m, lib_image l where m.img_id = l.id and m.tag_id = 4;
+
+-- 描述 
+select * from lib_image where `desc` like "%人%";
+-- 标签
+select * from lib_tag t, asset.map_image_tag m, lib_image i where t.id=m.tag_id and m.img_id=i.id
+and t.name like "%人%";
+-- 标签加描述
+select * from lib_tag t,asset.map_image_tag m,lib_image i where t.id=m.tag_id and m.img_id=i.id
+and ( t.`name` like "%人%" or i.`desc` like "%人%");
+
  */
 
 module.exports = {
@@ -118,5 +186,8 @@ module.exports = {
     selectImgs,
     add,
     edit,
-    deleteImg
+    deleteImg,
+    deleteTags,
+    addTag,
+    search
 }

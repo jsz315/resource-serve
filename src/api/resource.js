@@ -4,9 +4,7 @@ const multer = require('koa-multer')
 const fs = require('fs')
 const path = require('path')
 const config = require('../core/config')
-const {
-    resource
-} = require('../sql/index');
+const {resource} = require('../sql/index');
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -59,13 +57,57 @@ router.post('/resource/edit', upload.single('file'), async (ctx, next) => {
     }
 })
 
+router.post("/resource/delete", upload.single('file'), async (ctx, next) => {
+    // var list = ctx.req.body.list;
+    ctx.set('Access-Control-Allow-Origin', '*');
+    console.log(ctx.req.body);
+    var list = JSON.parse(ctx.req.body.list);
+    list.forEach(item => {
+        config.deleteImg(item.name);
+    });
+    for(var i = 0; i < list.length; i++){
+        var item = list[i];
+        await resource.deleteImg(item.id);
+        await resource.deleteTags(item.id);
+    }
+    ctx.body = {
+        req: "success"
+    }
+})
+
 router.get("/resource/test", async (ctx, next) => {
     ctx.body = "resource test";
 })
 
+router.get("/resource/addTag", async (ctx, next) => {
+    var tag = ctx.request.query.tag;
+    console.log(tag);
+    resource.addTag(tag);
+    ctx.body = "success";
+})
+
+router.get("/resource/search", async (ctx, next) => {
+    var {name, isTag, isDesc} = ctx.request.query;
+    var res = await resource.search(name, isTag == 'true', isDesc == 'true');
+    if (res) {
+        ctx.body = JSON.stringify({
+            data: res,
+            error: false
+        });
+    } else {
+        ctx.body = JSON.stringify({
+            error: true
+        });
+    }
+})
+
+
 
 router.get("/resource/imgs", async (ctx, next) => {
-    let res = await resource.selectImgs();
+    var {page, size} = ctx.request.query;
+    page = Number(page);
+    size = Number(size);
+    let res = await resource.selectImgs(page * size, size);
     if (res) {
         ctx.body = JSON.stringify({
             data: res,

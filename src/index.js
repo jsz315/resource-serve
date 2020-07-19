@@ -3,12 +3,20 @@ const Router = require('koa-router')
 const cors = require('koa-cors')
 const path = require('path')
 const static = require('koa-static')
-
+const bodyparser = require('koa-bodyparser')
+// const koaBody = require('koa-body');
 const app = new Koa()
 const router = new Router();
 const resourceRouter = require('./api/resource');
 
 app.use(cors());
+app.use(bodyparser());
+// app.use(koaBody({
+//     multipart: true,
+//     formidable: {
+//         maxFileSize: 200*1024*1024    // 设置上传文件大小最大限制，默认2M
+//     }
+// }));
 
 async function start(host, port) {
 
@@ -40,4 +48,4 @@ function getIPAddress(){
 }
 
 
-start("127.0.0.1", 8899)
+start("127.0.0.1", 8090)
